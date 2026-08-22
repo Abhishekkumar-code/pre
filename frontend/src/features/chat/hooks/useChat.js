@@ -1,6 +1,6 @@
 import { useDispatch } from "react-redux";
 import { initializedsocketconnection } from "../service/chat.socket";
-import { sendmessage, getchats, getmessages } from "../service/chat.api.js";
+import { sendmessage, getchats, getmessages, uploadpdf } from "../service/chat.api.js"; // ✅ uploadpdf added
 import {
   setcurrentchatId,
   setisLoading,
@@ -32,7 +32,7 @@ export const useChat = () => {
         );
       }
 
-      // User's message — imageurl ke saath
+
       dispatch(
         addnewmessage({
           chatId: chat.id || chat._id,
@@ -42,7 +42,7 @@ export const useChat = () => {
         })
       );
 
-      // AI's message
+     
       dispatch(
         addnewmessage({
           chatId: chat.id || chat._id,
@@ -110,8 +110,25 @@ export const useChat = () => {
     dispatch(setcurrentchatId(chatId));
   }
 
+  const uploadPdfHandler = async ({ file, chatId }) => {
+    dispatch(setisLoading(true));
+
+    try {
+      const data = await uploadpdf({ file, chatId });
+      return data; 
+    } catch (error) {
+      dispatch(
+        seterror(error.response?.data?.message || "Failed to upload PDF.")
+      );
+      throw error; 
+    } finally {
+      dispatch(setisLoading(false));
+    }
+  };
+
   return {
     initializedsocketconnection,
-    sendmessagehandler, handleGetChats, handleOpenChat, startnewchat
+    sendmessagehandler, handleGetChats, handleOpenChat, startnewchat,
+    uploadPdfHandler   
   };
 };

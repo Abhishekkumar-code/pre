@@ -1,4 +1,5 @@
 import { useDispatch } from "react-redux";
+import toast from "react-hot-toast";
 import { register, login, getme } from "../service/auth.api";
 import { setUser, setLoading, setError } from "../auth.slice.js";
 
@@ -11,8 +12,13 @@ export function useAuth() {
             dispatch(setLoading(true))
             const data = await register({ email, username, password })
             dispatch(setUser(data.user))
+            toast.success(data.message || "Email Send Succesfully")
+            return true
         } catch (error) {
-            dispatch(setError(error.response?.data?.message || "Registration failed"))
+            const message = error.response?.data?.message || "Registration failed"
+            dispatch(setError(message))
+            toast.error(message)
+            return false
         } finally {
             dispatch(setLoading(false))
         }
@@ -23,10 +29,13 @@ export function useAuth() {
             dispatch(setLoading(true))
             const data = await login({ email, password })
             dispatch(setUser(data.user))
-                return true 
+            toast.success("Login successful!")
+            return true 
         } catch (err) {
-            dispatch(setError(err.response?.data?.message || "Login failed"))
-              return false 
+            const message = err.response?.data?.message || "Login failed"
+            dispatch(setError(message))
+            toast.error(message)
+            return false 
         } finally {
             dispatch(setLoading(false))
         }
@@ -39,7 +48,9 @@ export function useAuth() {
             dispatch(setUser(data.user))
             
         } catch (err) {
-            dispatch(setError(err.response?.data?.message || "Failed to fetch user data"))
+            const message = err.response?.data?.message || "Failed to fetch user data"
+            dispatch(setError(message))
+           
         } finally {
             dispatch(setLoading(false))
         }

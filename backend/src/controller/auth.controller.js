@@ -16,7 +16,7 @@ export async function registercontroller(req, res) {
         return res.status(400).json({
             message: isuseralreadyexists.email === email ? "emial already exists" : "username is alreaduy exists",
             success: false,
-            err: "user already exists"
+            err: "User Already Exists"
         })
     }
 
@@ -45,7 +45,7 @@ export async function registercontroller(req, res) {
     })
 
     return res.status(200).json({
-        message: "email sent succesfully and user created",
+        message: "Account created! Please check your email to verify",
     })
 } 
 
@@ -59,7 +59,7 @@ export async function verifyemail(req, res) {
         return res.status(400).json({
             message: "invalidtoken",
             success: false,
-            err: "user not found"
+            err: "User Not Found"
         })
     }
 
@@ -94,9 +94,9 @@ export async function logincontroller(req, res) {
     }
     if (!user.verified) {
         return res.status(400).json({
-            message: "Please verify your email before logging in",
+            message: "Please verify your email before logging-In",
             success: false,
-            err: "email not verified"
+            err: "Email not verified"
         })
     }
 

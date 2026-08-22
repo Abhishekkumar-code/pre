@@ -3,15 +3,18 @@ import ReactMarkdown from 'react-markdown'
 import { useSelector } from 'react-redux'
 import { useChat } from '../hooks/useChat'
 import remarkGfm from 'remark-gfm'
-import { Paperclip, X, ArrowUp, Plus, MessageSquare, Menu } from 'lucide-react'
+import { Paperclip, X, ArrowUp, Plus, MessageSquare, Menu, FileText, Loader2 } from 'lucide-react'
 
 const Dashboard = () => {
   const chat = useChat()
   const [chatInput, setChatInput] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null)
+  const [selectedPdf, setSelectedPdf] = useState(null)       // NEW
+  const [pdfUploading, setPdfUploading] = useState(false)    // NEW
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const fileInputRef = useRef(null)
+  const pdfInputRef = useRef(null)                            // NEW
   const textareaRef = useRef(null)
   const messagesEndRef = useRef(null)
 
@@ -60,6 +63,37 @@ const Dashboard = () => {
     setImagePreviewUrl(null)
   }
 
+  // NEW: PDF is uploaded immediately on selection, not queued with the next message
+  const handlePdfSelect = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (!currentchatId) {
+      // no chat yet — create one the same way sendmessage does implicitly,
+      // by requiring a chat to exist first. Simplest: block and tell user.
+      alert('Start a chat with a text message first, then attach a PDF.')
+      return
+    }
+
+    setSelectedPdf(file)
+    setPdfUploading(true)
+
+    try {
+      await chat.uploadPdfHandler({ file, chatId: currentchatId })
+    } catch (err) {
+      console.error('PDF upload failed', err)
+      alert('Failed to process PDF. Please try again.')
+      setSelectedPdf(null)
+    } finally {
+      setPdfUploading(false)
+    }
+  }
+
+  const removeSelectedPdf = () => {
+    setSelectedPdf(null)
+  }
+
   const handleSubmitMessage = (event) => {
     event.preventDefault()
     const trimmedMessage = chatInput.trim()
@@ -91,6 +125,7 @@ const Dashboard = () => {
     chat.startnewchat?.()
     setChatInput('')
     removeSelectedImage()
+    removeSelectedPdf() // NEW
     setSidebarOpen(false)
   }
 
@@ -269,11 +304,36 @@ const Dashboard = () => {
               </div>
             )}
 
+            {/* NEW: PDF badge (no visual preview, just filename + status) */}
+            {selectedPdf && (
+              <div className='mb-2 flex items-center gap-2 rounded-2xl border border-[#1a1c22] bg-[#14161c] px-3 py-2'>
+                {pdfUploading ? (
+                  <Loader2 size={16} className='shrink-0 animate-spin text-[#7C86FF]' />
+                ) : (
+                  <FileText size={16} className='shrink-0 text-[#7C86FF]' />
+                )}
+                <span className='truncate text-sm text-[#d5d6db]'>
+                  {selectedPdf.name}
+                </span>
+                <span className='shrink-0 text-xs text-[#5c5f68]'>
+                  {pdfUploading ? 'Processing…' : 'Ready'}
+                </span>
+                <button
+                  type='button'
+                  onClick={removeSelectedPdf}
+                  className='ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#8b8e98] transition hover:bg-white/5 hover:text-white'
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <form
               onSubmit={handleSubmitMessage}
               className='flex items-end gap-2 rounded-3xl bg-[#14161c] px-3 py-2 shadow-lg shadow-black/30 transition focus-within:shadow-black/50'
             >
               <input type='file' accept='image/*' ref={fileInputRef} onChange={handleFileSelect} className='hidden' />
+              <input type='file' accept='application/pdf' ref={pdfInputRef} onChange={handlePdfSelect} className='hidden' /> {/* NEW */}
 
               <button
                 type='button'
@@ -282,6 +342,17 @@ const Dashboard = () => {
                 title='Attach image'
               >
                 <Paperclip size={18} />
+              </button>
+
+              {/* NEW: PDF attach button */}
+              <button
+                type='button'
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={pdfUploading}
+                className='mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#8b8e98] transition hover:bg-white/5 hover:text-white disabled:opacity-50'
+                title='Attach PDF'
+              >
+                <FileText size={18} />
               </button>
 
               <textarea

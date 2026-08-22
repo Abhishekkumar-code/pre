@@ -1,18 +1,23 @@
 import React from 'react'
 import { RouterProvider } from "react-router-dom"
 import { router } from "./app.routes.jsx"
-import {useAuth} from "../features/auth/hook/useAuth.js"  
+import { useAuth } from "../features/auth/hook/useAuth.js"
 import { useEffect } from 'react'
-const App = () => { 
+import { Toaster } from 'react-hot-toast';
 
-  const auth = useAuth() 
+const App = () => {
 
-useEffect(() => {
-auth.handleGetMe()
-},[]);
+  const auth = useAuth()
+
+  useEffect(() => {
+    auth.handleGetMe()
+  }, []);
 
   return (
-   <RouterProvider router={router} />
+    <>
+      <Toaster position="top-right" />
+      <RouterProvider router={router} />
+    </>
   )
 }
 

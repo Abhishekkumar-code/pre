@@ -1,10 +1,10 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatMistralAI } from "@langchain/mistralai"
-import { HumanMessage, SystemMessage, AIMessage ,tool,createAgent} from "langchain"
+import { HumanMessage, SystemMessage, AIMessage, tool, createAgent } from "langchain"
 import * as z from "zod"
-import { model } from "mongoose";
-import {searchinternet} from "../services/internet.service.js";
-
+import { searchinternet } from "../services/internet.service.js";
+import { sendEmail } from "./mail.service.js";
+import { queryVectorStore } from "./vectorstore.services.js";
 
 const geminimodel = new ChatGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -13,68 +13,75 @@ const geminimodel = new ChatGoogleGenerativeAI({
 
 const mistralmodel = new ChatMistralAI({
   apiKey: process.env.MISTRAL_API_KEY,
-  model: "mistral-small-latest",
-  
-
+  model: "mistral-large-latest",
 })
 
-const searchInternetTool = tool(
-    searchinternet,
-    {
-        name: "searchInternet",
-        description: "Use this tool to get the latest information from the internet.",
-        schema: z.object({
-            query: z.string().describe("The search query to look up on the internet.")
-        })
-    }
+const sendemail = tool(
+  sendEmail, {
+    name: "sendEmail",
+    description: "use these tool to send the email to someone ",
+    schema: z.object({
+      to: z.string().email().describe("recipient's email address"),
+      subject: z.string().describe("subject of the email"),
+      html: z.string().describe("HTML content of the email"),
+      text: z.string().describe("plain text content of the email")
+    })
+  }
 )
 
-const agent = createAgent({
-    model: mistralmodel,
-    tools: [ searchInternetTool ],
-})
+const searchInternetTool = tool(
+  searchinternet,
+  {
+    name: "searchInternet",
+    description: "Use this tool to get the latest information from the internet.",
+    schema: z.object({
+      query: z.string().describe("The search query to look up on the internet.")
+    })
+  }
+)
 
-// export async function generateresponse(messages) {
-//   console.log(messages);
+function createSearchDocumentTool(chatId) {
+  return tool(
+    async ({ query }) => {
+      const results = await queryVectorStore(chatId, query, 4);
+      if (!results.length) {
+        return "No relevant information found in the uploaded document.";
+      }
+      return results.map(r => `[${r.source}] ${r.text}`).join("\n\n");
+    },
+    {
+      name: "searchDocument",
+      description:
+        "Use this tool to search inside the PDF document(s) the user uploaded in this chat, whenever the question could relate to that document's content.",
+      schema: z.object({
+        query: z.string().describe("The search query to look up in the uploaded document."),
+      }),
+    }
+  );
+}
 
-//   const response = await agent.invoke({
-//     messages: [
-//       new SystemMessage(`
-// You are a helpful and precise assistant.
+const agentCache = new Map();
 
-// If you don't know the answer, say "I don't know".
+function getAgentForChat(chatId) {
+  const key = chatId?.toString() || "no-chat";
+  if (agentCache.has(key)) return agentCache.get(key);
 
-// you are created by Abhishek kumar a Full stack developer
+  const tools = [searchInternetTool, sendemail];
+  if (chatId) tools.push(createSearchDocumentTool(chatId));
 
-// If the question requires up-to-date information (current date, time, weather, latest news, sports scores, stock prices, gold prices, exchange rates, or any live information), ALWAYS use the "searchInternetTool" tool before answering.
+  const agent = createAgent({ model: mistralmodel, tools });
+  agentCache.set(key, agent);
+  return agent;
+}
 
-// Never guess current information. Always use the tool first and answer using the tool results.
-// `),
+export function invalidateAgentCache(chatId) {
+  agentCache.delete(chatId?.toString());
+}
 
-//       ...messages.map((msg) => {
-//         if (msg.role === "user") {
-//           return new HumanMessage(msg.content);
-//         } else if (msg.role === "ai") {
-//           return new AIMessage(msg.content);
-//         }
-//       }),
-//     ],
-//   });
-
-//   console.dir(response, { depth: null });
-
-//   return response.messages[response.messages.length - 1].content;
-// }
-// busy because to may requests 
-// export async function generateresponse(message){
-//   const response = await geminimodel.invoke([
-//     new HumanMessage(message)
-//   ]);
-//   return response.content;
-// }
-
-export async function generateresponse(messages) {
+export async function generateresponse(messages, chatId) {
   console.log(messages);
+
+  const agent = getAgentForChat(chatId);
 
   const response = await agent.invoke({
     messages: [
@@ -85,14 +92,17 @@ If you don't know the answer, say "I don't know".
 
 you are created by Abhishek kumar a Full stack developer Student at CT Institute of Technology and Research.
 
+IF anyone ask to send and email or email send to sendemail tool activate and send the email to the recipient.
+
 If the question requires up-to-date information (current date, time, weather, latest news, sports scores, stock prices, gold prices, exchange rates, or any live information), ALWAYS use the "searchInternetTool" tool before answering.
+
+If the user's question could relate to a document they uploaded in this chat, ALWAYS use the "searchDocument" tool first to check for relevant content before answering.
 
 Never guess current information. Always use the tool first and answer using the tool results.
 `),
 
       ...messages.map((msg) => {
         if (msg.role === "user") {
-          // Agar image hai, multimodal content array banao
           if (msg.imageurl) {
             return new HumanMessage({
               content: [

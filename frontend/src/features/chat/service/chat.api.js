@@ -44,3 +44,18 @@ export const deletechat = async (chatId)=>{
     const response = await api.delete(`/api/chat/${chatId}`)
     return response.data
 }
+
+export const uploadpdf = async ({ file, chatId }) => {
+  const formData = new FormData();
+  formData.append("pdf", file);
+  formData.append("chat", chatId);
+
+  const response = await api.post("/api/chat/upload-pdf", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+ console.log(response);
+ 
+  return response.data;
+};

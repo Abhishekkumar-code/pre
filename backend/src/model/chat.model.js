@@ -12,6 +12,10 @@ const chatSchema = new mongoose.Schema(
             default: 'New Chat',
             trim: true,
         },
+        hasDocument: {
+            type: Boolean,
+            default: false,
+        },
     },
     { timestamps: true }
 );

@@ -15,11 +15,13 @@ const Register = () => {
 
   const { handleRegister } = useAuth()
   const navigate = useNavigate()
-
+   
 
   const submitForm = async (event) => {
     event.preventDefault()
-
+     setEmail("")
+     setPassword("")
+    setUsername("")
     const payload = { username, email, password }
     const success = await handleRegister(payload)
 
@@ -27,9 +29,7 @@ const Register = () => {
       navigate("/login")
     }
 
-     setEmail("")
-     setPassword("")
-    setUsername("")
+   
   }
 
   return (

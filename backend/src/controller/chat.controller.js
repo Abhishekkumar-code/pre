@@ -1,8 +1,9 @@
-import { generateresponse, genratechattitle } from "../services/ai.service.js"
+import { generateresponse, genratechattitle, invalidateAgentCache } from "../services/ai.service.js"
 import uploadimage from "../services/Storage.service.js";
 import chatmodel from "../model/chat.model.js"
 import messagemodel from "../model/message.model.js"
-
+import { extractTextFromPdf, chunkText } from "../services/pdf.services.js"
+import { addChunksToVectorStore, deleteChatCollection } from "../services/vectorstore.services.js"
 
 export async function sendmessage(req, res) {
     console.log(req.file)
@@ -41,7 +42,7 @@ export async function sendmessage(req, res) {
 
 
     const messages = await messagemodel.find({ chat: chatId || chat._id })
-    const result = await generateresponse(messages);
+    const result = await generateresponse(messages, chat._id || chatId);   
 
     const aimessage = await messagemodel.create({
         chat: chat._id || chatId,
@@ -115,6 +116,8 @@ export async function deletechat(req,res){
         chat:chatId
     })
 
+    await deleteChatCollection(chatId);   // NEW: clean up the vector store too
+
     res.status(200).json({
         message:"chat deleted successfully"
     })
@@ -122,49 +125,34 @@ export async function deletechat(req,res){
 
 
 
+export async function uploadpdf(req, res) {
+    try {
+        const { chat: chatId } = req.body;
 
+        if (!req.file) {
+            return res.status(400).json({ message: "PDF file is required" });
+        }
 
+        const chat = await chatmodel.findOne({ _id: chatId, user: req.user.id });
+        if (!chat) {
+            return res.status(404).json({ message: "chat not found" });
+        }
 
+        const text = await extractTextFromPdf(req.file.buffer);
+        const chunks = await chunkText(text);
+        await addChunksToVectorStore(chatId, chunks, req.file.originalname);
 
+        chat.hasDocument = true;
+        await chat.save();
 
+        invalidateAgentCache(chatId);
 
-
-
-
-
-
-
-// purana code
-// export async function sendmessage(req, res) {
-//     const { message, chat: chatId } = req.body
-
-//     let title = null;
-//     let chat = null;
-
-//     if (!chatId) {
-//         title = await generatechattitle(message);
-//         chat = await chatmodel.create({
-//             user: req.user.id,
-//             title
-//         })
-//     } else {
-//         chat = await chatmodel.findById(chatId);
-//     }
-
-//     const usermessage = await messagemodel.create({
-//         chat: chat._id,
-//         content: message,
-//         role: "user"
-//     })
-
-//     const messages = await messagemodel.find({ chat: chat._id }).sort({ createdAt: 1 });
-//     const result = await generateresponse(messages);
-
-//     const aimessage = await messagemodel.create({
-//         chat: chat._id,
-//         content: result,
-//         role: "ai"
-//     })
-
-//     res.json({ title, chat, aimessage });
-// }
+        res.status(200).json({
+            message: "PDF processed and stored successfully",
+            chunkCount: chunks.length,
+        });
+    } catch (err) {
+        console.error("uploadpdf error:", err); 
+        res.status(500).json({ message: "PDF upload failed", error: err.message });
+    }
+}
