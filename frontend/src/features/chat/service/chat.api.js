@@ -1,10 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "http://localhost:3000",
-    withCredentials: true,
-})
-
+  baseURL: import.meta.env.PROD ? "" : "http://localhost:3000",
+  withCredentials: true,
+});
 
 export const sendmessage = async ({ message, chatId, image }) => {
   const formData = new FormData();
