@@ -4,51 +4,52 @@ import jwt from "jsonwebtoken"
 import { sendEmail } from "../services/mail.service.js";
 
 export async function registercontroller(req, res) {
-    const { email, username, password } = req.body
+    try {
+        const { email, username, password } = req.body
 
-    const isuseralreadyexists = await userModel.findOne({
-        $or: [
-            { email }, { username }
-        ]
-    })
+        const isuseralreadyexists = await userModel.findOne({
+            $or: [{ email }, { username }]
+        })
 
-    if (isuseralreadyexists) {
-        return res.status(400).json({
-            message: isuseralreadyexists.email === email ? "emial already exists" : "username is alreaduy exists",
+        if (isuseralreadyexists) {
+            return res.status(400).json({
+                message: isuseralreadyexists.email === email ? "email already exists" : "username already exists",
+                success: false,
+                err: "User Already Exists"
+            })
+        }
+
+        const user = await userModel.create({ username, email, password })
+
+        const emailverificationtoken = jwt.sign(
+            { email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        )
+
+        await sendEmail({
+            to: user.email,
+            subject: "welcome to perplexity",
+            html: `<p>${user.username}</p>
+            <p>Thank you for registering at <strong>Perplexity</strong>. We are excited to have you on board!</p>
+            <p>Please click on the link below to verify your email address:</p>
+            <a href="${process.env.BACKEND_URL}/api/auth/verify?token=${emailverificationtoken}">Verify</a>
+            <p>If you did not create an account, no further action is required.</p>
+            <p>Best regards,<br>Perplexity Team</p>`
+        })
+
+        return res.status(200).json({
+            message: "Account created! Please check your email to verify",
+        })
+    } catch (err) {
+        console.error("registercontroller error:", err)
+        return res.status(500).json({
+            message: "Registration failed",
             success: false,
-            err: "User Already Exists"
+            err: err.message
         })
     }
-
-
-    const user = await userModel.create({
-        username, email, password
-    })
-
-    const emailverificationtoken = jwt.sign({
-        email: user.email,
-    }, process.env.JWT_SECRET, {
-        expiresIn: "1h"
-    })
- 
-    
-    await sendEmail({
-        to: user.email,
-        subject: "welcone to perplexity",
-        html: `<p>${user.username}</p> 
-        <p> Thank you for registering at <strong>Perplexity</strong>.We are excited to have you on board!</p>
-        <p> Please click on the link below to verify your email address:</p>
-         <a href="${process.env.BACKEND_URL}/api/auth/verify?token=${emailverificationtoken}">Verify</a>
-         <p>If you did not create an account, no further action is required.</p>
-         <p>Best regards,<br>Perplexity Team</p>`
-
-    })
-
-    return res.status(200).json({
-        message: "Account created! Please check your email to verify",
-    })
-} 
-
+}
 export async function verifyemail(req, res) {
     const { token } = req.query;
 
