@@ -1,7 +1,7 @@
 import ImageKit, { toFile } from '@imagekit/nodejs';
 
 const client = new ImageKit({
-    privateKey:process.env.ImageKit_key,
+    privateKey:process.env.Imagekit_key,
 
 });
 
