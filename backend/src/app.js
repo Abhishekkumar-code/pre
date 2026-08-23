@@ -15,11 +15,16 @@ const __dirname = path.dirname(__filename)
 const app = express()
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '..', 'dist')))
+
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://your-app.onrender.com"
+];
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-}))
+}));
 app.use(cookieParser())
 
 app.get("/health", (req, res) => {
