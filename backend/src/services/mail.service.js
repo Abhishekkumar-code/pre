@@ -39,23 +39,22 @@ dns.setDefaultResultOrder('ipv4first');
 
 // ye ho raha hia google app password page se isme env mai google use and bas google password hai 16 character ka 
  const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GOOGLE_USER,
-    pass: process.env.GOOGLE_APP_PASSWORD,
-  },
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.GOOGLE_USER,
+        pass: process.env.GOOGLE_APP_PASSWORD,
+    },
 });
 transporter.verify()
-  .then(() => {
-    console.log("Ready for sending emails");
-  })
-  .catch((err) => {
-    console.log("Email transporter verification failed");
-    console.log(err);
-  });
-
+    .then(() => {
+        console.log("Ready for sending emails");
+    })
+    .catch((err) => {
+        console.log("Email transporter verification failed");
+        console.log(err);
+    });
   export async function sendEmail({ to, subject, html,text }){ 
     const mailOptions = {
         from: process.env.GOOGLE_USER,
