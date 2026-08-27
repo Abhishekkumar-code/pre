@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'dist')))
 
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://your-app.onrender.com"
+    "https://preplexity-9cb6.onrender.com"
 ];
 app.use(cors({
     origin: allowedOrigins,
