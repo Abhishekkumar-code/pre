@@ -129,7 +129,7 @@ Never guess current information. Always use the tool first and answer using the 
 }
 
 export async function genratechattitle(message) {
-  const response = await mistralmodel.invoke([
+  const response = await geminimodel.invoke([
     new SystemMessage(`you are helpful assistant that generates concise and descriptive titlesfor chat conversations. User will provide you wuth first message of a chat convesation and you will generate a title that captures the essence of the conversation in 2-4 words. The title should be clear , relevant , and engaging giving users a quick undestanding of the chat's topic `),
     new HumanMessage(`Generate a title for a chat conversation based on the following first message :"${message} "`)
   ])
