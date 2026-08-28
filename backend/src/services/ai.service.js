@@ -11,11 +11,13 @@ import { queryVectorStore } from "./vectorstore.services.js";
 const geminimodel = new ChatGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
   model: "gemini-2.5-flash",
+  timeout: 60000,
 });
 
 const mistralmodel = new ChatMistralAI({
   apiKey: process.env.MISTRAL_API_KEY,
   model: "mistral-large-latest",
+  timeout: 60000,
 })
 
 const sendemail = tool(
