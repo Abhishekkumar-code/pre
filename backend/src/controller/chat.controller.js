@@ -6,123 +6,121 @@ import { extractTextFromPdf, chunkText } from "../services/pdf.services.js"
 import { addChunksToVectorStore, deleteChatCollection } from "../services/vectorstore.services.js"
 
 export async function sendmessage(req, res) {
-    console.log(req.file)
-    const { message, chat: chatId  } = req.body;
-    let title = null;
-    let chat = null;
-    let imageurl = null;
+    try {
+        console.log(req.file)
+        const { message, chat: chatId } = req.body;
+        let title = null;
+        let chat = null;
+        let imageurl = null;
 
-  if (req.file) {
-      const uploaded = await uploadimage({
-        buffer: req.file.buffer,
-        filename: `chat_${Date.now()}_${req.file.originalname}`,
-        folder: "/chat-images",
-      });
-      imageurl = uploaded.url;
-    }
+        if (req.file) {
+            const uploaded = await uploadimage({
+                buffer: req.file.buffer,
+                filename: `chat_${Date.now()}_${req.file.originalname}`,
+                folder: "/chat-images",
+            });
+            imageurl = uploaded.url;
+        }
 
-    if (!chatId) {
+        if (!chatId) {
+            title = await genratechattitle(message);
+            title = title?.replace(/"/g, "").trim();
+            chat = await chatmodel.create({
+                user: req.user.id,
+                title
+            })
+        } else {
+            chat = await chatmodel.findById(chatId);
+        }
 
-        title = await genratechattitle(message);
-        title = title?.replace(/"/g, "").trim();
-        chat = await chatmodel.create({
-            user: req.user.id,
-            title
+        const usermessage = await messagemodel.create({
+            chat: chat._id || chatId,
+            content: message,
+            imageurl: imageurl || null,
+            role: "user"
         })
-    } else {
-        chat = await chatmodel.findById(chatId);
+
+        const messages = await messagemodel.find({ chat: chatId || chat._id })
+        console.log("Calling generateresponse...")
+        const result = await generateresponse(messages, chat._id || chatId);
+        console.log("Got result:", result)
+
+        const aimessage = await messagemodel.create({
+            chat: chat._id || chatId,
+            content: result,
+            role: "ai"
+        })
+
+        res.status(201).json({
+            title,
+            chat,
+            aimessage,
+            usermessage
+        });
+    } catch (err) {
+        console.error("sendmessage error:", err);
+        res.status(500).json({ message: "Failed to send message", error: err.message });
     }
-
-    const usermessage = await messagemodel.create({
-        chat: chat._id || chatId,
-        content: message,
-        imageurl: imageurl || null, 
-        role: "user"
-    })
-
-
-    const messages = await messagemodel.find({ chat: chatId || chat._id })
-    const result = await generateresponse(messages, chat._id || chatId);   
-
-    const aimessage = await messagemodel.create({
-        chat: chat._id || chatId,
-        content: result,
-        role: "ai"
-    })
-
-         console.log(messages);
- 
-
-
-    res.status(201).json({
-        title,
-        chat,
-        aimessage,
-        usermessage
-    });
-}
- 
-
-export async function  getchat(req,res){
-const userid = req.user.id
-const chats = await chatmodel.find({user:userid})
-
-res.status(200).json({
-    message:"chat recieved succesfully",
-    chats
-})
 }
 
 
-export async function getmessages(req,res){
-    const {chatId }= req.params;
+export async function getchat(req, res) {
+    const userid = req.user.id
+    const chats = await chatmodel.find({ user: userid })
+
+    res.status(200).json({
+        message: "chat recieved succesfully",
+        chats
+    })
+}
+
+
+export async function getmessages(req, res) {
+    const { chatId } = req.params;
     const chat = await chatmodel.findOne({
-        _id:chatId,
-        user:req.user.id
-
+        _id: chatId,
+        user: req.user.id
     })
 
-    if(!chat){
-
+    if (!chat) {
         return res.status(404).json({
-            message:"chat not found "
+            message: "chat not found "
         })
     }
-  const messages = await messagemodel.find({
-    chat:chatId
-  })
-  res.status(200).json({
-    message:"Message recieved succefully",
-    messages
-  })
+    const messages = await messagemodel.find({
+        chat: chatId
+    })
+    res.status(200).json({
+        message: "Message recieved succefully",
+        messages
+    })
 }
 
 
-export async function deletechat(req,res){
-    const {chatId} = req.params;
-    
+export async function deletechat(req, res) {
+    const { chatId } = req.params;
+
     const chat = await chatmodel.findOneAndDelete({
-        _id:chatId,
-        user:req.user.id
+        _id: chatId,
+        user: req.user.id
     })
 
-    if(!chat){
+    if (!chat) {
         return res.status(404).json({
-            message:"chat not found"
+            message: "chat not found"
         })
     }
 
     await messagemodel.deleteMany({
-        chat:chatId
+        chat: chatId
     })
 
-    await deleteChatCollection(chatId);   // NEW: clean up the vector store too
+    await deleteChatCollection(chatId);
 
     res.status(200).json({
-        message:"chat deleted successfully"
+        message: "chat deleted successfully"
     })
 }
-
 
 
 export async function uploadpdf(req, res) {
@@ -152,7 +150,7 @@ export async function uploadpdf(req, res) {
             chunkCount: chunks.length,
         });
     } catch (err) {
-        console.error("uploadpdf error:", err); 
+        console.error("uploadpdf error:", err);
         res.status(500).json({ message: "PDF upload failed", error: err.message });
     }
 }
