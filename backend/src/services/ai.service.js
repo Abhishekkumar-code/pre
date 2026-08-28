@@ -73,7 +73,7 @@ function getAgentForChat(chatId) {
   const tools = [searchInternetTool, sendemail];
   if (chatId) tools.push(createSearchDocumentTool(chatId));
 
-  const agent = createAgent({ model: mistralmodel, tools });
+  const agent = createAgent({ model: geminimodel, tools });
   agentCache.set(key, agent);
   return agent;
 }
