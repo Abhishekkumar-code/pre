@@ -87,6 +87,30 @@ export async function generateresponse(messages, chatId) {
 
   const agent = getAgentForChat(chatId);
 
+  const formattedMessages = await Promise.all(
+    messages.map(async (msg) => {
+      if (msg.role === "user") {
+        if (msg.imageurl) {
+          const imageResponse = await fetch(msg.imageurl);
+          const buffer = await imageResponse.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+          const dataUrl = `data:${mimeType};base64,${base64}`;
+
+          return new HumanMessage({
+            content: [
+              { type: "text", text: msg.content || "Describe the Image." },
+              { type: "image_url", image_url: dataUrl },
+            ],
+          });
+        }
+        return new HumanMessage(msg.content);
+      } else if (msg.role === "ai") {
+        return new AIMessage(msg.content);
+      }
+    })
+  );
+
   const response = await agent.invoke({
     messages: [
       new SystemMessage(`
@@ -105,21 +129,7 @@ If the user's question could relate to a document they uploaded in this chat, AL
 Never guess current information. Always use the tool first and answer using the tool results.
 `),
 
-      ...messages.map((msg) => {
-        if (msg.role === "user") {
-          if (msg.imageurl) {
-            return new HumanMessage({
-              content: [
-                { type: "text", text: msg.content || "Describe the Image." },
-                { type: "image_url", image_url: msg.imageurl },
-              ],
-            });
-          }
-          return new HumanMessage(msg.content);
-        } else if (msg.role === "ai") {
-          return new AIMessage(msg.content);
-        }
-      }),
+      ...formattedMessages,
     ],
   });
 
