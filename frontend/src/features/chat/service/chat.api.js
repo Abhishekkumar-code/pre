@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.PROD ? "" : "http://localhost:3000",
+ baseURL: import.meta.env.PROD
+    ? "https://preplexity-9cb6.onrender.com"
+    : "http://localhost:3000",
   withCredentials: true,
 });
 
