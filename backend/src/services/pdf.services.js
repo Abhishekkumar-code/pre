@@ -8,7 +8,7 @@ export async function extractTextFromPdf(buffer) {
   return result.text;
 }
 
-export async function chunkText(text, chunkSize = 500, chunkOverlap = 100) {
+export async function chunkText(text, chunkSize = 800, chunkOverlap = 100) {
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize,
     chunkOverlap,
