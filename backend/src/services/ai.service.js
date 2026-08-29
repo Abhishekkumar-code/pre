@@ -7,6 +7,16 @@ import * as z from "zod"
 import { searchinternet } from "../services/internet.service.js";
 import { sendEmail } from "./mail.service.js";
 import { queryVectorStore } from "./vectorstore.services.js";
+import { ChatGroq } from "@langchain/groq"
+
+const Chatgroq = new ChatGroq({
+    apiKey:process.env.CHATGROQ_API_KEY,
+    model : "meta-llama/llama-4-maverick-17b-128e-instruct",
+    temperature: 0.4,
+    timeout: 60000,
+    
+
+})
 
 const geminimodel = new ChatGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -73,7 +83,7 @@ function getAgentForChat(chatId) {
   const tools = [searchInternetTool, sendemail];
   if (chatId) tools.push(createSearchDocumentTool(chatId));
 
-  const agent = createAgent({ model: geminimodel, tools });
+  const agent = createAgent({ model: Chatgroq, tools });
   agentCache.set(key, agent);
   return agent;
 }
@@ -139,7 +149,7 @@ Never guess current information. Always use the tool first and answer using the 
 }
 
 export async function genratechattitle(message) {
-  const response = await geminimodel.invoke([
+  const response = await Chatgroq.invoke([
     new SystemMessage(`you are helpful assistant that generates concise and descriptive titlesfor chat conversations. User will provide you wuth first message of a chat convesation and you will generate a title that captures the essence of the conversation in 2-4 words. The title should be clear , relevant , and engaging giving users a quick undestanding of the chat's topic `),
     new HumanMessage(`Generate a title for a chat conversation based on the following first message :"${message} "`)
   ])

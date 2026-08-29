@@ -3,6 +3,7 @@ import userModel from "../model/user.model.js";
 import jwt from "jsonwebtoken"
 import { sendEmail } from "../services/mail.service.js";
 
+
 export async function registercontroller(req, res) {
     try {
         const { email, username, password } = req.body

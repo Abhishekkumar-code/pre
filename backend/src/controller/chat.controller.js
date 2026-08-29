@@ -5,6 +5,7 @@ import messagemodel from "../model/message.model.js"
 import { extractTextFromPdf, chunkText } from "../services/pdf.services.js"
 import { addChunksToVectorStore, deleteChatCollection } from "../services/vectorstore.services.js"
 
+
 export async function sendmessage(req, res) {
     try {
         console.log(req.file)
