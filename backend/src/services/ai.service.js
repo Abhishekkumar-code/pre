@@ -10,11 +10,11 @@ import { queryVectorStore } from "./vectorstore.services.js";
 import { ChatGroq } from "@langchain/groq"
 
 const Chatgroq = new ChatGroq({
-    apiKey:process.env.CHATGROQ_API_KEY,
-    model : "qwen/qwen3.6-27b",
-    temperature: 0.4,
-    timeout: 60000,
-    
+  apiKey: process.env.CHATGROQ_API_KEY,
+  model: "qwen/qwen3.6-27b",
+  temperature: 0.4,
+  timeout: 60000,
+
 
 })
 
@@ -32,15 +32,15 @@ const mistralmodel = new ChatMistralAI({
 
 const sendemail = tool(
   sendEmail, {
-    name: "sendEmail",
-    description: "use these tool to send the email to someone ",
-    schema: z.object({
-      to: z.string().email().describe("recipient's email address"),
-      subject: z.string().describe("subject of the email"),
-      html: z.string().describe("HTML content of the email"),
-      text: z.string().describe("plain text content of the email")
-    })
-  }
+  name: "sendEmail",
+  description: "use these tool to send the email to someone ",
+  schema: z.object({
+    to: z.string().email().describe("recipient's email address"),
+    subject: z.string().describe("subject of the email"),
+    html: z.string().describe("HTML content of the email"),
+    text: z.string().describe("plain text content of the email")
+  })
+}
 )
 
 const searchInternetTool = tool(
@@ -110,7 +110,7 @@ export async function generateresponse(messages, chatId) {
           return new HumanMessage({
             content: [
               { type: "text", text: msg.content || "Describe the Image." },
-              { type: "image_url", image_url: dataUrl },
+              { type: "image_url", image_url: { url: dataUrl } },
             ],
           });
         }
