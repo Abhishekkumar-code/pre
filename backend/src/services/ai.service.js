@@ -148,10 +148,37 @@ Never guess current information. Always use the tool first and answer using the 
   return response.messages[response.messages.length - 1].content;
 }
 
+
+// thsi si working with mistral and gemini model
+// export async function genratechattitle(message) { 
+//   const response = await Chatgroq.invoke([ 
+//     new SystemMessage(`you are helpful assistant that generates concise and descriptive titlesfor chat conversations. User will provide you wuth first message of a chat convesation and you will generate a title that captures the essence of the conversation in 2-4 words. The title should be clear , relevant , and engaging giving users a quick undestanding of the chat's topic `), 
+//     new HumanMessage(`Generate a title for a chat conversation based on the following first message :"${message} "`) 
+//   ]) 
+//   return response.content 
+// }
+ 
 export async function genratechattitle(message) {
   const response = await Chatgroq.invoke([
-    new SystemMessage(`you are helpful assistant that generates concise and descriptive titlesfor chat conversations. User will provide you wuth first message of a chat convesation and you will generate a title that captures the essence of the conversation in 2-4 words. The title should be clear , relevant , and engaging giving users a quick undestanding of the chat's topic `),
-    new HumanMessage(`Generate a title for a chat conversation based on the following first message :"${message} "`)
-  ])
-  return response.content
+    new SystemMessage(`
+      Generate a concise and descriptive title for the conversation.
+
+      Rules:
+      - Return ONLY the title.
+      - Use 2-4 words.
+      - Do not explain anything.
+      - Do not include reasoning.
+      - Do not include <think> tags.
+    `),
+    new HumanMessage(
+      `Generate a title based on this first message: "${message}"`
+    )
+  ]);
+
+  let title = response.content.toString();
+
+  // Remove <think>...</think>
+  title = title.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+  return title;
 }
